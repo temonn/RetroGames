@@ -33,7 +33,7 @@ class FailScreen extends StatelessWidget {
             textSize: 15,
             textColor: Colors.white,
           ),
-          SizedBox(height: 8.0), // Adjust the spacing between the lines
+          SizedBox(height: 8.0),
           NeonText(
             text: "Your highest score is $highScore",
             spreadColor: const Color.fromARGB(255, 30, 67, 233),
@@ -71,8 +71,7 @@ class FailScreen extends StatelessWidget {
                 textColor: Colors.white,
               ),
               onPressed: () {
-                Navigator.of(context)
-                    .pop(true); // Pass `true` to indicate isPlaying is true
+                Navigator.of(context).pop(true);
               },
             ),
           ],

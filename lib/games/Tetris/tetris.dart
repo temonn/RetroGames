@@ -68,16 +68,19 @@ class _TetrisBoardState extends State<TetrisBoard> {
   }
 
   void startTimer() {
+    timer?.cancel();
     spawnPiece();
-    timer = Timer.periodic(Duration(milliseconds: 500), (Timer timer) {
+    score = 0;
+    timer = Timer.periodic(Duration(milliseconds: 300), (Timer timer) {
       if (!movePieceDown()) {
         lockPiece();
         clearLines();
         if (!gameOver) {
           spawnPiece();
+          print(piece);
         } else {
-        timer.cancel();
-      }
+          timer.cancel();
+        }
       }
     });
   }
@@ -126,9 +129,12 @@ class _TetrisBoardState extends State<TetrisBoard> {
       for (int col = 0; col < piece[row].length; col++) {
         if (piece[row][col]) {
           board[piecePosition.y + row][piecePosition.x + col] = color;
+          print("Row: ${piecePosition.y + row}, Col: ${piecePosition.x + col}");
         }
       }
     }
+
+    placePiece();
   }
 
   bool movePieceDown() {
@@ -277,20 +283,26 @@ class _TetrisBoardState extends State<TetrisBoard> {
   }
 
   void checkGameOver() {
-    for (int row = 0; row < piece.length; row++) {
-      for (int col = 0; col < piece[row].length; col++) {
-        if (piece[row][col] &&
-            piecePosition.y + row == 0 &&
-            board[piecePosition.y + row][piecePosition.x + col] !=
-                Colors.black) {
-          setState(() {
-            gameOver = true;
-            _showFailScreen();
-            print(containerState);
-          });
-          timer?.cancel();
-          return;
-        }
+    int topRow = 0; // The index of the top row in the current piece
+
+    for (int col = 0; col < piece[topRow].length; col++) {
+      if (piece[topRow][col] &&
+          ((piecePosition.y + topRow ==
+                  0 /*&&
+                  board[piecePosition.y + topRow][piecePosition.x + col] !=
+                      Colors.black*/
+              ) &&
+              (piecePosition.y + topRow < numRows - 1 &&
+                  containerState[piecePosition.y + topRow + 1]
+                          [piecePosition.x + col] ==
+                      1))) {
+        setState(() {
+          gameOver = true;
+          _showFailScreen();
+          //print(containerState);
+        });
+        timer?.cancel();
+        return;
       }
     }
   }
@@ -329,10 +341,8 @@ class _TetrisBoardState extends State<TetrisBoard> {
 
     if (isPlayingAgain == true) {
       setState(() {
-        gameOver = false;
+        initState();
       });
-      initializeBoard();
-      startTimer();
     }
   }
 

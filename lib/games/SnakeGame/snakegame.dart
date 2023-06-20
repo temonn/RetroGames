@@ -97,13 +97,13 @@ class _GamePageState extends State<GamePage> {
   Future<void> _loadHighScore() async {
     prefs = await SharedPreferences.getInstance();
     setState(() {
-      savedHighScore = prefs.getInt('highScore') ?? 0;
+      savedHighScore = prefs.getInt('highScoreSnake') ?? 0;
     });
   }
 
   void _showFailScreen() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedHighScore = prefs.getInt('highScore') ?? 0;
+    final savedHighScore = prefs.getInt('highScoreSnake') ?? 0;
 
     final isPlayingAgain = await showDialog<bool>(
       context: context,
@@ -155,7 +155,7 @@ class _GamePageState extends State<GamePage> {
         score++;
         if (score > savedHighScore) {
           // Save the new high score
-          prefs.setInt('highScore', score);
+          prefs.setInt('highScoreSnake', score);
           savedHighScore = score;
         }
         food = _randomPoint();
