@@ -341,7 +341,9 @@ class _TetrisBoardState extends State<TetrisBoard> {
 
     if (isPlayingAgain == true) {
       setState(() {
-        initState();
+        gameOver = false;
+        initializeBoard();
+        startTimer();
       });
     }
   }
