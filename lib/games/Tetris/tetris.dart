@@ -5,19 +5,17 @@ import 'package:neon_widgets/neon_widgets.dart';
 import 'package:summerproject/Services/customAppBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../Services/failScreen.dart';
+import '../../mainmenu.dart';
 
 class TetrisGame extends StatelessWidget {
+  const TetrisGame({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        appBar: CustomAppBar(title: 'Tetris'),
-        body: SafeArea(
-          child: TetrisBoard(),
-        ),
-      ),
+      title: 'Tetris',
+      home: TetrisBoard(),
     );
   }
 }
@@ -36,7 +34,8 @@ class _TetrisBoardState extends State<TetrisBoard> {
   Point<int> piecePosition = Point(0, 0);
   Timer? timer;
   bool gameOver = false;
-  var colorFinal = null;
+  bool _isFailScreenDisplayed = false;
+  var colorFinal;
   late SharedPreferences prefs;
   int savedHighScore = 0;
   int score = 0;
@@ -46,7 +45,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
     super.initState();
     _loadHighScore();
     initializeBoard();
-    startTimer();
+    startGame();
   }
 
   @override
@@ -67,21 +66,27 @@ class _TetrisBoardState extends State<TetrisBoard> {
     );
   }
 
+  void startGame() {
+    gameOver = false;
+    score = 0;
+    spawnPiece();
+    startTimer();
+  }
+
   void startTimer() {
     timer?.cancel();
-    spawnPiece();
-    score = 0;
-    timer = Timer.periodic(Duration(milliseconds: 300), (Timer timer) {
-      if (!movePieceDown()) {
-        lockPiece();
-        clearLines();
-        if (!gameOver) {
-          spawnPiece();
-          print(piece);
-        } else {
-          timer.cancel();
+    timer = Timer.periodic(Duration(milliseconds: 300), (_) {
+      setState(() {
+        if (!movePieceDown()) {
+          lockPiece();
+          clearLines();
+          if (!gameOver) {
+            spawnPiece();
+          } else {
+            timer?.cancel();
+          }
         }
-      }
+      });
     });
   }
 
@@ -283,15 +288,11 @@ class _TetrisBoardState extends State<TetrisBoard> {
   }
 
   void checkGameOver() {
-    int topRow = 0; // The index of the top row in the current piece
+    int topRow = 0;
 
     for (int col = 0; col < piece[topRow].length; col++) {
       if (piece[topRow][col] &&
-          ((piecePosition.y + topRow ==
-                  0 /*&&
-                  board[piecePosition.y + topRow][piecePosition.x + col] !=
-                      Colors.black*/
-              ) &&
+          ((piecePosition.y + topRow == 0) &&
               (piecePosition.y + topRow < numRows - 1 &&
                   containerState[piecePosition.y + topRow + 1]
                           [piecePosition.x + col] ==
@@ -299,7 +300,6 @@ class _TetrisBoardState extends State<TetrisBoard> {
         setState(() {
           gameOver = true;
           _showFailScreen();
-          //print(containerState);
         });
         timer?.cancel();
         return;
@@ -328,29 +328,97 @@ class _TetrisBoardState extends State<TetrisBoard> {
   }
 
   void _showFailScreen() async {
+    if (_isFailScreenDisplayed) {
+      return;
+    }
+
+    _isFailScreenDisplayed = true;
+
     final prefs = await SharedPreferences.getInstance();
     final savedHighScore = prefs.getInt('highScore') ?? 0;
 
-    final isPlayingAgain = await showDialog<bool>(
+    showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return FailScreen(score: score, highScore: savedHighScore);
+        return AlertDialog(
+          backgroundColor: const Color.fromARGB(255, 39, 37, 37),
+          title: Center(
+            child: NeonText(
+              text: "You lost :(",
+              spreadColor: const Color.fromARGB(255, 30, 67, 233),
+              blurRadius: 20,
+              textSize: 19,
+              textColor: Colors.white,
+            ),
+          ),
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              NeonText(
+                text: "Your score was $score",
+                spreadColor: const Color.fromARGB(255, 30, 67, 233),
+                blurRadius: 20,
+                textSize: 15,
+                textColor: Colors.white,
+              ),
+              SizedBox(height: 8.0),
+              NeonText(
+                text: "Your highest score is $savedHighScore",
+                spreadColor: const Color.fromARGB(255, 30, 67, 233),
+                blurRadius: 20,
+                textSize: 15,
+                textColor: Colors.white,
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  child: NeonText(
+                    text: "Return to menu",
+                    spreadColor: const Color.fromARGB(255, 30, 67, 233),
+                    blurRadius: 20,
+                    textSize: 15,
+                    textColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => MainMenu()),
+                    );
+                  },
+                ),
+                TextButton(
+                  child: NeonText(
+                    text: "Try again",
+                    spreadColor: const Color.fromARGB(255, 30, 67, 233),
+                    blurRadius: 20,
+                    textSize: 15,
+                    textColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    _isFailScreenDisplayed = false;
+                    startGame();
+                    initializeBoard();
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
       },
     );
-
-    if (isPlayingAgain == true) {
-      setState(() {
-        gameOver = false;
-        initializeBoard();
-        startTimer();
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: CustomAppBar(title: 'Tetris'),
       backgroundColor: Colors.black,
       body: Container(
         padding: const EdgeInsets.all(10),
