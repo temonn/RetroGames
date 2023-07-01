@@ -1,5 +1,7 @@
 import 'dart:math'; // For generating random numbers
 import 'dart:async'; // For creating a Timer
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:neon_widgets/neon_widgets.dart'; // For creating neon widgets
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,6 +10,8 @@ import 'package:flutter/material.dart';
 
 import '../../Services/customAppBar.dart';
 import '../../Services/failScreen.dart';
+
+FirebaseFirestore db = FirebaseFirestore.instance;
 
 class SnakeGame extends StatelessWidget {
   const SnakeGame({super.key});
@@ -33,6 +37,7 @@ class _GamePageState extends State<GamePage> {
   final int columns = 20;
   late SharedPreferences prefs;
   int savedHighScore = 0;
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
   // The four possible directions of the snake
   final List<Point<int>> directions = [
@@ -96,20 +101,92 @@ class _GamePageState extends State<GamePage> {
 
   Future<void> _loadHighScore() async {
     prefs = await SharedPreferences.getInstance();
-    setState(() {
-      savedHighScore = prefs.getInt('highScoreSnake') ?? 0;
-    });
+
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser != null) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      Map<String, dynamic>? userData =
+          userSnapshot.data() as Map<String, dynamic>?;
+
+      final username = userData?['username'];
+
+      FirebaseFirestore.instance
+          .collection("games")
+          .doc("Snake")
+          .get()
+          .then((docSnapshot) {
+        List<dynamic> leaderboard = docSnapshot.data()?['leaderboard'] ?? [];
+
+        for (int i = 0; i < leaderboard.length; i++) {
+          if (leaderboard[i]['username'] == username) {
+            savedHighScore = leaderboard[i]['highscore'];
+            break;
+          }
+        }
+
+        setState(() {
+          savedHighScore =
+              savedHighScore ?? prefs.getInt('highScoreSnake_$userId') ?? 0;
+        });
+      });
+    } else {
+      setState(() {
+        savedHighScore = prefs.getInt('highScoreSnake_$userId') ?? 0;
+      });
+    }
   }
 
   void _showFailScreen() async {
     final prefs = await SharedPreferences.getInstance();
-    final savedHighScore = prefs.getInt('highScoreSnake') ?? 0;
+
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    int highScoreFromPrefs = prefs.getInt('highScoreSnake_$userId') ?? 0;
+    int highScoreFromFirestore = 0;
+
+    if (currentUser != null) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      Map<String, dynamic>? userData =
+          userSnapshot.data() as Map<String, dynamic>?;
+
+      final username = userData?['username'];
+
+      DocumentSnapshot gameSnapshot = await FirebaseFirestore.instance
+          .collection("games")
+          .doc("Snake")
+          .get();
+      Map<String, dynamic>? gameData =
+          gameSnapshot.data() as Map<String, dynamic>?;
+
+      List<dynamic> leaderboard =
+          gameData?['leaderboard'] as List<dynamic>? ?? [];
+
+      for (int i = 0; i < leaderboard.length; i++) {
+        if (leaderboard[i]['username'] == username) {
+          highScoreFromFirestore = leaderboard[i]['highscore'];
+          break;
+        }
+      }
+    }
+
+    int displayedHighScore = highScoreFromFirestore > highScoreFromPrefs
+        ? highScoreFromFirestore
+        : highScoreFromPrefs;
 
     final isPlayingAgain = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return FailScreen(score: score, highScore: savedHighScore);
+        return FailScreen(score: score, highScore: displayedHighScore);
       },
     );
 
@@ -121,8 +198,63 @@ class _GamePageState extends State<GamePage> {
     }
   }
 
+  void updateData() async {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser != null) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      Map<String, dynamic>? userData =
+          userSnapshot.data() as Map<String, dynamic>?;
+
+      final username = userData?['username'];
+
+      FirebaseFirestore.instance
+          .collection("games")
+          .doc("Snake")
+          .get()
+          .then((docSnapshot) {
+        List<dynamic> leaderboard = docSnapshot.data()?['leaderboard'] ?? [];
+
+        bool usernameExists = false;
+        int indexToUpdate = -1;
+
+        for (int i = 0; i < leaderboard.length; i++) {
+          if (leaderboard[i]['username'] == username) {
+            usernameExists = true;
+            indexToUpdate = i;
+            break;
+          }
+        }
+
+        if (usernameExists) {
+          if (leaderboard[indexToUpdate]['highscore'] < savedHighScore) {
+            leaderboard[indexToUpdate]['highscore'] = savedHighScore;
+          }
+        } else {
+          leaderboard.add({
+            "username": username,
+            "highscore": savedHighScore,
+          });
+        }
+
+        FirebaseFirestore.instance
+            .collection("games")
+            .doc("Snake")
+            .set({
+              "leaderboard": leaderboard,
+            }, SetOptions(merge: true))
+            .then((_) => print("User data updated successfully!"))
+            .catchError((error) => print("Failed to update user data: $error"));
+      });
+    }
+  }
+
   // Move the snake one step
-  void _moveSnake() {
+  Future<void> _moveSnake() async {
     final head = snake.first + direction;
     Point<int> newHead;
 
@@ -155,8 +287,9 @@ class _GamePageState extends State<GamePage> {
         score++;
         if (score > savedHighScore) {
           // Save the new high score
-          prefs.setInt('highScoreSnake', score);
+          prefs.setInt('highScoreSnake_$userId', score);
           savedHighScore = score;
+          updateData();
         }
         food = _randomPoint();
       } else {

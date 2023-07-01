@@ -40,6 +40,9 @@ dependencies:
   neon_widgets: ^2.0.0
   shared_preferences: ^2.1.1
   flame: ^1.7.3
+  cloud_firestore: ^4.8.1
+  firebase_auth: ^4.6.3
+  firebase_core: ^2.14.0
 
 dev_dependencies:
   flutter_test:

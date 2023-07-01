@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:neon_widgets/neon_widgets.dart';
 import 'package:summerproject/Services/customAppBar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../mainmenu.dart';
+
+FirebaseFirestore db = FirebaseFirestore.instance;
 
 class TetrisGame extends StatelessWidget {
   const TetrisGame({super.key});
@@ -26,6 +30,7 @@ class TetrisBoard extends StatefulWidget {
 }
 
 class _TetrisBoardState extends State<TetrisBoard> {
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
   final int numRows = 15;
   final int numCols = 10;
   List<List<Color>> board = [];
@@ -90,6 +95,60 @@ class _TetrisBoardState extends State<TetrisBoard> {
     });
   }
 
+  void updateData() async {
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser != null) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      Map<String, dynamic>? userData =
+          userSnapshot.data() as Map<String, dynamic>?;
+
+      final username = userData?['username'];
+
+      FirebaseFirestore.instance
+          .collection("games")
+          .doc("Tetris")
+          .get()
+          .then((docSnapshot) {
+        List<dynamic> leaderboard = docSnapshot.data()?['leaderboard'] ?? [];
+
+        bool usernameExists = false;
+        int indexToUpdate = -1;
+
+        for (int i = 0; i < leaderboard.length; i++) {
+          if (leaderboard[i]['username'] == username) {
+            usernameExists = true;
+            indexToUpdate = i;
+            break;
+          }
+        }
+        if (usernameExists) {
+          if (leaderboard[indexToUpdate]['highscore'] < savedHighScore) {
+            leaderboard[indexToUpdate]['highscore'] = savedHighScore;
+          }
+        } else {
+          leaderboard.add({
+            "username": username,
+            "highscore": savedHighScore,
+          });
+        }
+
+        FirebaseFirestore.instance
+            .collection("games")
+            .doc("Tetris")
+            .set({
+              "leaderboard": leaderboard,
+            }, SetOptions(merge: true))
+            .then((_) => print("User data updated successfully!"))
+            .catchError((error) => print("Failed to update user data: $error"));
+      });
+    }
+  }
+
   void spawnPiece() {
     final pieces = [
       [
@@ -119,6 +178,14 @@ class _TetrisBoardState extends State<TetrisBoard> {
         [false, true, true],
         [true, true, false]
       ],
+      [
+        [false, true, true],
+        [false, false, true]
+      ],
+      [
+        [true, true, false],
+        [true, false, false]
+      ],
     ];
     final random = Random();
     final index = random.nextInt(pieces.length);
@@ -138,7 +205,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
         }
       }
     }
-
+    score += 10;
     placePiece();
   }
 
@@ -230,12 +297,6 @@ class _TetrisBoardState extends State<TetrisBoard> {
         if (piece[row][col]) {
           board[piecePosition.y + row][piecePosition.x + col] = Colors.black;
           containerState[piecePosition.y + row][piecePosition.x + col] = 0;
-          score++;
-          if (score > savedHighScore) {
-            // Save the new high score
-            prefs.setInt('highScore', score);
-            savedHighScore = score;
-          }
         }
       }
     }
@@ -299,6 +360,11 @@ class _TetrisBoardState extends State<TetrisBoard> {
                       1))) {
         setState(() {
           gameOver = true;
+          if (score > savedHighScore) {
+            // Save the new high score
+            prefs.setInt('highScore_$userId', score);
+            savedHighScore = score;
+          }
           _showFailScreen();
         });
         timer?.cancel();
@@ -308,23 +374,75 @@ class _TetrisBoardState extends State<TetrisBoard> {
   }
 
   void clearLines() {
+    List<int> fullRows = [];
+
     for (int row = numRows - 1; row >= 0; row--) {
       if (board[row].every((cell) => cell != Colors.black)) {
-        setState(() {
+        fullRows.add(row);
+      }
+    }
+
+    if (fullRows.isNotEmpty) {
+      setState(() {
+        for (int row in fullRows) {
           board.removeAt(row);
           board.insert(0, List<Color>.filled(numCols, Colors.black));
           containerState.removeAt(row);
           containerState.insert(0, List<int>.filled(numCols, 0));
-        });
-      }
+        }
+
+        score += 50; // Increment score by the number of cleared lines
+
+        if (score > savedHighScore) {
+          // Save the new high score
+          prefs.setInt('highScore_$userId', score);
+          savedHighScore = score;
+          updateData();
+        }
+      });
     }
   }
 
   Future<void> _loadHighScore() async {
     prefs = await SharedPreferences.getInstance();
-    setState(() {
-      savedHighScore = prefs.getInt('highScore') ?? 0;
-    });
+
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser != null) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      Map<String, dynamic>? userData =
+          userSnapshot.data() as Map<String, dynamic>?;
+
+      final username = userData?['username'];
+
+      FirebaseFirestore.instance
+          .collection("games")
+          .doc("Snake")
+          .get()
+          .then((docSnapshot) {
+        List<dynamic> leaderboard = docSnapshot.data()?['leaderboard'] ?? [];
+
+        for (int i = 0; i < leaderboard.length; i++) {
+          if (leaderboard[i]['username'] == username) {
+            savedHighScore = leaderboard[i]['highscore'];
+            break;
+          }
+        }
+
+        setState(() {
+          savedHighScore =
+              savedHighScore ?? prefs.getInt('highScore_$userId') ?? 0;
+        });
+      });
+    } else {
+      setState(() {
+        savedHighScore = prefs.getInt('highScore_$userId') ?? 0;
+      });
+    }
   }
 
   void _showFailScreen() async {
@@ -334,8 +452,43 @@ class _TetrisBoardState extends State<TetrisBoard> {
 
     _isFailScreenDisplayed = true;
 
-    final prefs = await SharedPreferences.getInstance();
-    final savedHighScore = prefs.getInt('highScore') ?? 0;
+    User? currentUser = FirebaseAuth.instance.currentUser;
+
+    int highScoreFromPrefs = prefs.getInt('highScore_$userId') ?? 0;
+    int highScoreFromFirestore = 0;
+
+    if (currentUser != null) {
+      DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      Map<String, dynamic>? userData =
+          userSnapshot.data() as Map<String, dynamic>?;
+
+      final username = userData?['username'];
+
+      DocumentSnapshot gameSnapshot = await FirebaseFirestore.instance
+          .collection("games")
+          .doc("Tetris")
+          .get();
+      Map<String, dynamic>? gameData =
+          gameSnapshot.data() as Map<String, dynamic>?;
+
+      List<dynamic> leaderboard =
+          gameData?['leaderboard'] as List<dynamic>? ?? [];
+
+      for (int i = 0; i < leaderboard.length; i++) {
+        if (leaderboard[i]['username'] == username) {
+          highScoreFromFirestore = leaderboard[i]['highscore'];
+          break;
+        }
+      }
+    }
+    
+    int displayedHighScore = highScoreFromFirestore > highScoreFromPrefs
+        ? highScoreFromFirestore
+        : highScoreFromPrefs;
 
     showDialog(
       context: context,
@@ -365,7 +518,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
               ),
               SizedBox(height: 8.0),
               NeonText(
-                text: "Your highest score is $savedHighScore",
+                text: "Your highest score is $displayedHighScore",
                 spreadColor: const Color.fromARGB(255, 30, 67, 233),
                 blurRadius: 20,
                 textSize: 15,

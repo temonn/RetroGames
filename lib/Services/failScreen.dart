@@ -8,7 +8,6 @@ class FailScreen extends StatelessWidget {
 
   const FailScreen({Key? key, required this.score, required this.highScore})
       : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return AlertDialog(

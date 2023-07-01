@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:neon_widgets/neon_widgets.dart';
+import 'package:summerproject/Services/login.dart';
 import 'package:summerproject/games/SnakeGame/snakegame.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 
@@ -14,10 +16,54 @@ class MainMenu extends StatefulWidget {
   _MainMenuState createState() => _MainMenuState();
 }
 
-const List<String> list = <String>['Snake', 'Pong', 'Tetris'];
+const List<String> list = <String>['Snake', 'Tetris'];
 String dropdownValue = list.first;
 
 class _MainMenuState extends State<MainMenu> {
+  List<dynamic> leaderboardData = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchLeaderboardData().then((data) {
+      setState(() {
+        leaderboardData = data;
+      });
+    });
+  }
+
+  void updateLeaderboardData() {
+    fetchLeaderboardData().then((data) {
+      setState(() {
+        leaderboardData = data;
+      });
+    });
+  }
+
+Future<List<dynamic>> fetchLeaderboardData() async {
+  if (dropdownValue == "Snake") {
+    DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+        .collection("games")
+        .doc("Snake")
+        .get();
+    Map<String, dynamic>? data = docSnapshot.data() as Map<String, dynamic>?;
+    List<dynamic> leaderboard = data?['leaderboard'] ?? [];
+    leaderboard.sort((a, b) => b['highscore'].compareTo(a['highscore']));
+    return leaderboard;
+  } else if (dropdownValue == "Tetris") {
+    DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+        .collection("games")
+        .doc("Tetris")
+        .get();
+    Map<String, dynamic>? data = docSnapshot.data() as Map<String, dynamic>?;
+    List<dynamic> leaderboard = data?['leaderboard'] ?? [];
+    leaderboard.sort((a, b) => b['highscore'].compareTo(a['highscore']));
+    return leaderboard;
+  } else {
+    return [];
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     List<Widget> slides = [
@@ -226,6 +272,7 @@ class _MainMenuState extends State<MainMenu> {
                     setState(() {
                       dropdownValue = value!;
                     });
+                    updateLeaderboardData();
                   },
                   items: list.map<DropdownMenuItem<String>>((String value) {
                     return DropdownMenuItem<String>(
@@ -238,6 +285,56 @@ class _MainMenuState extends State<MainMenu> {
                     );
                   }).toList(),
                 ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(width: 1),
+                    NeonText(
+                      text: 'User',
+                      textSize: 24,
+                    ),
+                    SizedBox(width: 80),
+                    NeonText(
+                      text: 'Highscore',
+                      textSize: 24,
+                    ),
+                    SizedBox(width: 1),
+                  ],
+                ),
+                SizedBox(height: 20),
+                GridView.builder(
+                  shrinkWrap: true,
+                  itemCount: leaderboardData.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 1,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 5,
+                  ),
+                  itemBuilder: (BuildContext context, int index) {
+                    return Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white),
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          NeonText(
+                            text: leaderboardData[index]['username'],
+                            textSize: 20,
+                          ),
+                          SizedBox(height: 10),
+                          NeonText(
+                            text: "${leaderboardData[index]['highscore']}",
+                            textSize: 20,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                )
               ],
             ),
           ),
@@ -252,7 +349,7 @@ class _MainMenuState extends State<MainMenu> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => SnakeGame()),
+                  MaterialPageRoute(builder: (context) => LoginPage()),
                 );
               },
               style: ButtonStyle(
