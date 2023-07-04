@@ -24,13 +24,14 @@ class PongScreen extends StatefulWidget {
 }
 
 class _PongScreenState extends State<PongScreen> {
-  double racketOnePosition = 5;
-  double racketTwoPosition = 5;
-  double racketSpeed = 5;
-  double AIracketSpeed = 3;
-  double racketWidth = 10;
-  double racketHeight = 60;
+  double racketOnePosition = 5; // Position of the AI paddle
+  double racketTwoPosition = 5; // Position of the AI paddle
+  double racketSpeed = 5; // The speed of the players paddle
+  double AIracketSpeed = 3; // The speed of the AIs paddle
+  double racketWidth = 10; // width of the paddles
+  double racketHeight = 60; // height of the paddles
 
+  // Position, size and speed of the ball
   double ballX = 0;
   double ballY = 0;
   double ballSize = 10;
@@ -157,6 +158,7 @@ class _PongScreenState extends State<PongScreen> {
     }
   }
 
+  // For moving the paddle
   void startRacketMovement(bool isMovingUp) {
     _racketMovementTimer = Timer.periodic(Duration(milliseconds: 16), (timer) {
       setState(() {

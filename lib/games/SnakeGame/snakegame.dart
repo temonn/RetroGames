@@ -1,8 +1,8 @@
-import 'dart:math'; // For generating random numbers
-import 'dart:async'; // For creating a Timer
+import 'dart:math';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:neon_widgets/neon_widgets.dart'; // For creating neon widgets
+import 'package:neon_widgets/neon_widgets.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,11 +33,11 @@ class GamePage extends StatefulWidget {
 
 class _GamePageState extends State<GamePage> {
   // Constants for the size of the game grid
-  final int rows = 20;
-  final int columns = 20;
-  late SharedPreferences prefs;
-  int savedHighScore = 0;
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
+  final int rows = 20; // Determines how tall/how many rows the gamefield has
+  final int columns = 20; // Determines how wide/how many columns the gamefield has
+  late SharedPreferences prefs;  // Shared preferences for storing high score in the phone
+  int savedHighScore = 0; // The saved high score
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? ''; // If a user is logged in gets the users id from Firebase
 
   // The four possible directions of the snake
   final List<Point<int>> directions = [
@@ -99,22 +99,27 @@ class _GamePageState extends State<GamePage> {
     });
   }
 
+// For getting the highscore from Firestore
   Future<void> _loadHighScore() async {
     prefs = await SharedPreferences.getInstance();
 
     User? currentUser = FirebaseAuth.instance.currentUser;
 
+  // If a user is logged in this gets their data from firestore
     if (currentUser != null) {
       DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
           .get();
 
+  // save user data as a Map
       Map<String, dynamic>? userData =
           userSnapshot.data() as Map<String, dynamic>?;
-
+  
+  // Get the logged in users username from Firestore
       final username = userData?['username'];
 
+  // Add the users username and highcore to the leaderboard database
       FirebaseFirestore.instance
           .collection("games")
           .doc("Snake")
@@ -122,6 +127,7 @@ class _GamePageState extends State<GamePage> {
           .then((docSnapshot) {
         List<dynamic> leaderboard = docSnapshot.data()?['leaderboard'] ?? [];
 
+  // Go through the "leaderboard" array in Firestore to see if the user is already in it
         for (int i = 0; i < leaderboard.length; i++) {
           if (leaderboard[i]['username'] == username) {
             savedHighScore = leaderboard[i]['highscore'];
@@ -178,6 +184,7 @@ class _GamePageState extends State<GamePage> {
       }
     }
 
+  // This displays the highscore based on which is higher the phones of firestores highscore
     int displayedHighScore = highScoreFromFirestore > highScoreFromPrefs
         ? highScoreFromFirestore
         : highScoreFromPrefs;
@@ -230,6 +237,8 @@ class _GamePageState extends State<GamePage> {
           }
         }
 
+    // If the users username already exists in the array and the "highscore" value is less than
+    // the currently saved highscore it gets updated
         if (usernameExists) {
           if (leaderboard[indexToUpdate]['highscore'] < savedHighScore) {
             leaderboard[indexToUpdate]['highscore'] = savedHighScore;

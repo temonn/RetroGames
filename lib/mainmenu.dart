@@ -40,6 +40,8 @@ class _MainMenuState extends State<MainMenu> {
     });
   }
 
+
+// For getting the leaderboard data
 Future<List<dynamic>> fetchLeaderboardData() async {
   if (dropdownValue == "Snake") {
     DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
@@ -268,7 +270,6 @@ Future<List<dynamic>> fetchLeaderboardData() async {
                     color: Colors.deepPurpleAccent,
                   ),
                   onChanged: (String? value) {
-                    // This is called when the user selects an item.
                     setState(() {
                       dropdownValue = value!;
                     });
@@ -279,7 +280,7 @@ Future<List<dynamic>> fetchLeaderboardData() async {
                       value: value,
                       child: Container(
                         width: MediaQuery.of(context).size.width *
-                            0.6, // Adjust the width as needed
+                            0.6,
                         child: Text(value),
                       ),
                     );

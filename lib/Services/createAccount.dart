@@ -98,7 +98,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     color: Colors.white,
                   ),
                 ),
-                //obscureText: true,
               ),
             ),
             
@@ -121,7 +120,6 @@ class _CreateAccountPageState extends State<CreateAccountPage> {
                     color: Colors.white,
                   ),
                 ),
-                //obscureText: true,
               ),
             ),
 

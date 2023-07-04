@@ -30,20 +30,21 @@ class TetrisBoard extends StatefulWidget {
 }
 
 class _TetrisBoardState extends State<TetrisBoard> {
-  final String userId = FirebaseAuth.instance.currentUser?.uid ?? '';
-  final int numRows = 15;
-  final int numCols = 10;
-  List<List<Color>> board = [];
-  List<List<bool>> piece = [];
-  List<List<int>> containerState = [];
-  Point<int> piecePosition = Point(0, 0);
-  Timer? timer;
-  bool gameOver = false;
-  bool _isFailScreenDisplayed = false;
-  var colorFinal;
-  late SharedPreferences prefs;
-  int savedHighScore = 0;
-  int score = 0;
+  final String userId = FirebaseAuth.instance.currentUser?.uid ?? ''; // If a user is logged in gets the users id from Firebase
+  final int numRows = 15; // Determines how tall/how many rows the gamefield has
+  final int numCols = 10; // Determines how wide/how many columns the gamefield has
+  List<List<Color>> board = []; // Represents the game board as a 2D list of colors
+  List<List<bool>> piece = []; // Represents the current falling piece as a 2D list of booleans
+  List<List<int>> containerState = []; // Stores the state of the container
+  Point<int> piecePosition = Point(0, 0); // Represents the position of the falling piece on the board
+  Timer? timer; // Timer for controlling the game loop
+  bool gameOver = false; // Indicates if the game is over
+  bool _isFailScreenDisplayed = false; // Indicates if the fail screen is displayed
+  var colorFinal; // Stores the final color for the piece 
+  late SharedPreferences prefs; // Shared preferences for storing high score in the phone
+  int savedHighScore = 0; // The saved high score
+  int score = 0; // The current score
+
 
   @override
   void initState() {
@@ -59,6 +60,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
     super.dispose();
   }
 
+  // Initialize the game board
   void initializeBoard() {
     board = List<List<Color>>.generate(
       numRows,
@@ -95,20 +97,25 @@ class _TetrisBoardState extends State<TetrisBoard> {
     });
   }
 
+  // Update user data
   void updateData() async {
     User? currentUser = FirebaseAuth.instance.currentUser;
 
+    // If a user is logged in this gets their data from firestore
     if (currentUser != null) {
       DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .doc(currentUser.uid)
           .get();
 
+    // save user data as a Map
       Map<String, dynamic>? userData =
           userSnapshot.data() as Map<String, dynamic>?;
 
+    // Get the logged in users username from Firestore
       final username = userData?['username'];
 
+    // Add the users username and highcore to the leaderboard database
       FirebaseFirestore.instance
           .collection("games")
           .doc("Tetris")
@@ -119,13 +126,16 @@ class _TetrisBoardState extends State<TetrisBoard> {
         bool usernameExists = false;
         int indexToUpdate = -1;
 
+    // Go through the "leaderboard" array in Firestore to see if the user is already in it
         for (int i = 0; i < leaderboard.length; i++) {
           if (leaderboard[i]['username'] == username) {
             usernameExists = true;
-            indexToUpdate = i;
+            indexToUpdate = i; // Get the array value to update
             break;
           }
         }
+        // If the users username already exists in the array and the "highscore" value is less than
+        // the currently saved highscore it gets updated
         if (usernameExists) {
           if (leaderboard[indexToUpdate]['highscore'] < savedHighScore) {
             leaderboard[indexToUpdate]['highscore'] = savedHighScore;
@@ -150,6 +160,8 @@ class _TetrisBoardState extends State<TetrisBoard> {
   }
 
   void spawnPiece() {
+
+    //Determine the different pieces shapes
     final pieces = [
       [
         [true, true, true, true]
@@ -191,10 +203,10 @@ class _TetrisBoardState extends State<TetrisBoard> {
     final index = random.nextInt(pieces.length);
     piece = List<List<bool>>.from(pieces[index]);
     final colors = [Colors.blue, Colors.red, Colors.yellow, Colors.purple];
-    final colorIndex = random.nextInt(colors.length);
+    final colorIndex = random.nextInt(colors.length); // Apply randomly a color from the 4 given options
     final color = colors[colorIndex];
     colorFinal = color;
-    piecePosition = Point<int>((numCols - piece[0].length) ~/ 2, 0);
+    piecePosition = Point<int>((numCols - piece[0].length) ~/ 2, 0); // Determine the pieces first position
 
     // Apply the random color to the piece
     for (int row = 0; row < piece.length; row++) {
@@ -209,8 +221,9 @@ class _TetrisBoardState extends State<TetrisBoard> {
     placePiece();
   }
 
+  // For moving the peices down
   bool movePieceDown() {
-    final nextPosition = Point(piecePosition.x, piecePosition.y + 1);
+    final nextPosition = Point(piecePosition.x, piecePosition.y + 1); 
     if (isValidPosition(piece, nextPosition)) {
       setState(() {
         // Clear the previous position of the piece
@@ -227,6 +240,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
     return false;
   }
 
+  // For rotating pieces
   void rotatePiece() {
     final List<List<bool>> rotatedPiece = List.generate(
       piece[0].length,
@@ -280,11 +294,14 @@ class _TetrisBoardState extends State<TetrisBoard> {
     }
   }
 
+
   void placePiece() {
     for (int row = 0; row < piece.length; row++) {
       for (int col = 0; col < piece[row].length; col++) {
         if (piece[row][col]) {
+          // Places the pieces colors where the piece is
           board[piecePosition.y + row][piecePosition.x + col] = colorFinal;
+          // Sets the containerState to 1 where the pieces is located
           containerState[piecePosition.y + row][piecePosition.x + col] = 1;
         }
       }
@@ -295,13 +312,16 @@ class _TetrisBoardState extends State<TetrisBoard> {
     for (int row = 0; row < piece.length; row++) {
       for (int col = 0; col < piece[row].length; col++) {
         if (piece[row][col]) {
+          // changes the color back to black when the piece is cleared
           board[piecePosition.y + row][piecePosition.x + col] = Colors.black;
+          // Sets the containerState to 0 where the pieces was
           containerState[piecePosition.y + row][piecePosition.x + col] = 0;
         }
       }
     }
   }
 
+  // For checking if the pieces postion is valid
   bool isValidPosition(List<List<bool>> piece, Point<int> position) {
     for (int row = 0; row < piece.length; row++) {
       for (int col = 0; col < piece[row].length; col++) {
@@ -348,6 +368,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
     }
   }
 
+  // For checking if the game is over
   void checkGameOver() {
     int topRow = 0;
 
@@ -358,6 +379,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
                   containerState[piecePosition.y + topRow + 1]
                           [piecePosition.x + col] ==
                       1))) {
+        // If the game is over we declare  gameOver = true, save the current highscore and show the Failcreen
         setState(() {
           gameOver = true;
           if (score > savedHighScore) {
@@ -373,6 +395,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
     }
   }
 
+  // For clearing lines if a row is completely full
   void clearLines() {
     List<int> fullRows = [];
 
@@ -403,10 +426,11 @@ class _TetrisBoardState extends State<TetrisBoard> {
     }
   }
 
+  // For getting the highscore from Firestore
   Future<void> _loadHighScore() async {
     prefs = await SharedPreferences.getInstance();
 
-    User? currentUser = FirebaseAuth.instance.currentUser;
+    User? currentUser = FirebaseAuth.instance.currentUser; // 
 
     if (currentUser != null) {
       DocumentSnapshot userSnapshot = await FirebaseFirestore.instance
@@ -445,6 +469,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
     }
   }
 
+  // If game over thsi scren will be shown to the user
   void _showFailScreen() async {
     if (_isFailScreenDisplayed) {
       return;
