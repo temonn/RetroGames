@@ -86,8 +86,8 @@ Future<List<dynamic>> fetchLeaderboardData() async {
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: NetworkImage(
-                          'https://i.natgeofe.com/n/101c7d2c-d45a-4579-a63c-450c4bac73e4/snakes_06_square.jpg'),
+                      image: AssetImage(
+                          'images/Snake.png'),
                       fit: BoxFit.scaleDown,
                     ),
                   ),
@@ -140,8 +140,8 @@ Future<List<dynamic>> fetchLeaderboardData() async {
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: NetworkImage(
-                          'https://s.hdnux.com/photos/01/31/65/24/23549203/3/rawImage.jpg'),
+                      image: AssetImage(
+                          'images/Pong.png'),
                       fit: BoxFit.scaleDown,
                     ),
                   ),
@@ -194,8 +194,8 @@ Future<List<dynamic>> fetchLeaderboardData() async {
                 child: Container(
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: NetworkImage(
-                          'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Typical_Tetris_Game.svg/1200px-Typical_Tetris_Game.svg.png'),
+                      image: AssetImage(
+                          'images/Tetris.png'),
                       fit: BoxFit.scaleDown,
                     ),
                   ),

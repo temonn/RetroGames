@@ -469,7 +469,7 @@ class _TetrisBoardState extends State<TetrisBoard> {
     }
   }
 
-  // If game over thsi scren will be shown to the user
+  // If game over thsi screen will be shown to the user
   void _showFailScreen() async {
     if (_isFailScreenDisplayed) {
       return;
@@ -510,7 +510,8 @@ class _TetrisBoardState extends State<TetrisBoard> {
         }
       }
     }
-    
+
+  // This displays the highscore based on which is higher the phones of firestores highscore  
     int displayedHighScore = highScoreFromFirestore > highScoreFromPrefs
         ? highScoreFromFirestore
         : highScoreFromPrefs;
