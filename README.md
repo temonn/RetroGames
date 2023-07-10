@@ -1,16 +1,26 @@
-# summerproject
+## Retro Games
 
-A new Flutter project.
+This project was made by a second year university student as a summer project. 
 
-## Getting Started
+## Introduction
 
-This project is a starting point for a Flutter application.
+This project is a Retro games app where you are able to play three classic games: Snake, Pong & Tetris. The user is also capable of creating an account, which gives the benefit of storing the users high score on Firebase and from there show it in the leaderboard
 
-A few resources to get you started if this is your first Flutter project:
+## Inside the app
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+When the app is launched the first thing the user sees is Snake. By swiping left or right the user can switch their view and see the different pages. The pages go in this order: Snake, Pong, Tetris, Leaderboard. 
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+![Image](images/firstCombine.jpg?raw=true "UI")
+
+By pressing the Play button the view changes the to the game itself. 
+
+![Image](images/LostScreen.png?raw=true "Lost")
+
+If the player loses a "Losing" screen will appear where it shows the users score from the just lost game and it also shows the user their high score. 
+
+
+## Credits
+
+Entirety of the project was made by Timon Poutiainen.
+
+
