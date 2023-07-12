@@ -24,3 +24,6 @@ If the player loses a "Losing" screen will appear where it shows the users score
 Entirety of the project was made by Timon Poutiainen.
 
 
+[Demo of the application](https://youtu.be/TlBXT7EBg3s)
+
+
